@@ -7,10 +7,11 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
+import { Share } from 'react-native';
 
 // ─── Category Data ────────────────────────────────────────────────────────────
 const CATEGORIES = [
-  { id: 'all', label: 'All', icon: '' },
+  { id: 'aAll', label: 'All', icon: '' },
   { id: 'days_special', label: "Day's Special", icon: '⭐' },
   { id: 'birthday', label: 'Birthday', icon: '🎂' },
   { id: 'good_morning', label: 'Good Morning', icon: '' },
@@ -76,10 +77,40 @@ const captureAndSaveImage = async (viewShotRef: any): Promise<boolean> => {
   }
 };
 
+/**
+ * Captures a ViewShot reference and opens the native share sheet using React Native's Share API.
+ * Handles errors and verifies sharing availability.
+ * @param viewShotRef - Reference to the ViewShot component
+ * @returns boolean indicating success or failure
+ */
+const captureAndShareImage = async (viewShotRef: any): Promise<boolean> => {
+  try {
+    // Ensure capture method is available
+    if (!viewShotRef.current) {
+      throw new Error('ViewShot ref not found');
+    }
+
+    // Small delay to ensure the UI is fully painted
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    // Capture the view as a high-quality URI
+    const uri = await viewShotRef.current.capture();
+
+    // Use React Native's Share API to share the image URI
+    await Share.share({ url: uri, title: 'Share Template' });
+    return true;
+  } catch (err: any) {
+    console.log('Share Error:', err);
+    Alert.alert('Share Failed', err?.message || 'Something went wrong while sharing the image.');
+    return false;
+  }
+};
+
 // ─── PostCard Component ────────────────────────────────────────────────────────
 const PostCard = ({ item, user }: { item: any; user: any }) => {
   const viewShotRef = useRef<ViewShot>(null);
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
   
   // Track image loading state to prevent capturing blank images
   const [templateLoaded, setTemplateLoaded] = useState(false);
@@ -104,6 +135,25 @@ const PostCard = ({ item, user }: { item: any; user: any }) => {
       }
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleShare = async () => {
+    // Ensure images are fully loaded before capturing
+    if (!templateLoaded || (user?.photo && !userPhotoLoaded)) {
+      Alert.alert('Please Wait', 'Images are still loading. Please try again in a moment.');
+      return;
+    }
+
+    try {
+      setSharing(true);
+      
+      // Small delay to ensure the UI is fully painted before capturing
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
+      await captureAndShareImage(viewShotRef);
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -142,9 +192,21 @@ const PostCard = ({ item, user }: { item: any; user: any }) => {
       <View style={styles.postActionsContainer}>
         {/* Main Actions Row */}
         <View style={styles.mainActionsRow}>
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#25D366' }]} activeOpacity={0.8}>
-            <Ionicons name="logo-whatsapp" size={16} color="#fff" />
-            <Text style={[styles.actionButtonText, { color: '#fff' }]}>Share</Text>
+          {/* Share Button with loading state */}
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: '#25D366' }, sharing && { opacity: 0.7 }]} 
+            activeOpacity={0.8}
+            onPress={handleShare}
+            disabled={sharing}
+          >
+            {sharing ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="logo-whatsapp" size={16} color="#fff" />
+            )}
+            <Text style={[styles.actionButtonText, { color: '#fff' }]}>
+              {sharing ? 'Sharing...' : 'Share'}
+            </Text>
           </TouchableOpacity>
 
           {/* Download Button with loading state */}
