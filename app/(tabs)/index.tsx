@@ -31,29 +31,80 @@ const DUMMY_POSTS = [
   { id: '3', title: 'नया', image: require('../../assets/images/three.png') },
 ];
 
+// ─── Utility: Capture & Save Image ─────────────────────────────────────────────
+/**
+ * Captures a ViewShot reference and saves it to the device's media gallery.
+ * Handles permissions and error reporting.
+ * @param viewShotRef - Reference to the ViewShot component
+ * @returns boolean indicating success or failure
+ */
+const captureAndSaveImage = async (viewShotRef: any): Promise<boolean> => {
+  try {
+    // ✅ Correct permission (NO true param)
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'Please allow access to save images to your gallery.'
+      );
+      return false;
+    }
+
+    // ✅ Safety check
+    if (!viewShotRef.current) {
+      throw new Error('ViewShot ref not found');
+    }
+
+    // ✅ Small delay (important for proper rendering)
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    // ✅ Capture image
+    const uri = await viewShotRef.current.capture();
+
+    // ✅ Save to gallery
+    await MediaLibrary.saveToLibraryAsync(uri);
+
+    return true;
+  } catch (err: any) {
+    console.log('Download Error:', err);
+    Alert.alert(
+      'Download Failed',
+      err?.message || 'Something went wrong while saving image.'
+    );
+    return false;
+  }
+};
+
 // ─── PostCard Component ────────────────────────────────────────────────────────
 const PostCard = ({ item, user }: { item: any; user: any }) => {
   const viewShotRef = useRef<ViewShot>(null);
   const [downloading, setDownloading] = useState(false);
+  
+  // Track image loading state to prevent capturing blank images
+  const [templateLoaded, setTemplateLoaded] = useState(false);
+  const [userPhotoLoaded, setUserPhotoLoaded] = useState(!user?.photo);
 
   const handleDownload = async () => {
-    // TODO: Re-enable after native build (expo run:android)
-    // try {
-    //   setDownloading(true);
-    //   const { status } = await MediaLibrary.requestPermissionsAsync();
-    //   if (status !== 'granted') {
-    //     Alert.alert('Permission Denied', 'Please allow media access to save images to gallery.');
-    //     return;
-    //   }
-    //   const uri = await (viewShotRef.current as any).capture();
-    //   await MediaLibrary.saveToLibraryAsync(uri);
-    //   Alert.alert('✅ Saved!', 'Image saved to your gallery.');
-    // } catch (err: any) {
-    //   console.error(err);
-    //   Alert.alert('Download Failed', err.message ?? 'Something went wrong.');
-    // } finally {
-    //   setDownloading(false);
-    // }
+    // Ensure images are fully loaded before capturing
+    if (!templateLoaded || (user?.photo && !userPhotoLoaded)) {
+      Alert.alert('Please Wait', 'Images are still loading. Please try again in a moment.');
+      return;
+    }
+
+    try {
+      setDownloading(true);
+      
+      // Small delay to ensure the UI is fully painted before capturing
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
+      const success = await captureAndSaveImage(viewShotRef);
+      if (success) {
+        Alert.alert('✅ Saved!', 'Image has been saved to your gallery.');
+      }
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -64,13 +115,18 @@ const PostCard = ({ item, user }: { item: any; user: any }) => {
         options={{ format: 'jpg', quality: 1 }}
         style={styles.postImageContainer}
       >
-        <Image source={item.image} style={styles.postImage} />
+        <Image 
+          source={item.image} 
+          style={styles.postImage} 
+          onLoad={() => setTemplateLoaded(true)}
+        />
 
         {/* User photo — top-right corner */}
         {user?.photo && (
           <Image
             source={{ uri: user.photo }}
             style={styles.userPhotoOverlay}
+            onLoad={() => setUserPhotoLoaded(true)}
           />
         )}
 

@@ -8,6 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TextInput } from 'react-native';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -17,6 +20,10 @@ export default function ProfileScreen() {
   const [phone, setPhone] = useState<string | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const [editingName, setEditingName] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
   // Load saved data from AsyncStorage on mount
   useEffect(() => {
@@ -28,6 +35,7 @@ export default function ProfileScreen() {
       ]);
       setPhone(storedPhone);
       setUsername(storedUsername);
+      setNewUsername(storedUsername || '');
       setPhotoUri(storedPhoto);
     };
     loadData();
@@ -65,6 +73,28 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleSaveName = async () => {
+    if (!newUsername.trim()) {
+      Alert.alert('Error', 'Name cannot be empty.');
+      return;
+    }
+    try {
+      setSavingName(true);
+      if (phone) {
+        const userDocRef = doc(db, 'users', phone);
+        await updateDoc(userDocRef, { username: newUsername.trim() });
+      }
+      await AsyncStorage.setItem('userUsername', newUsername.trim());
+      setUsername(newUsername.trim());
+      setEditingName(false);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update name.');
+      console.log(error);
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
@@ -99,7 +129,29 @@ export default function ProfileScreen() {
       </View>
 
       {/* User Info */}
-      {username && <Text style={styles.username}>{username}</Text>}
+      {editingName ? (
+        <View style={styles.editNameContainer}>
+          <TextInput
+            style={styles.nameInput}
+            value={newUsername}
+            onChangeText={setNewUsername}
+            autoFocus
+          />
+          <TouchableOpacity onPress={handleSaveName} style={styles.saveNameBtn} disabled={savingName}>
+            {savingName ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="checkmark" size={20} color="#fff" />}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => { setEditingName(false); setNewUsername(username || ''); }} style={styles.cancelNameBtn} disabled={savingName}>
+            <Ionicons name="close" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.nameContainer}>
+          {username && <Text style={styles.username}>{username}</Text>}
+          <TouchableOpacity onPress={() => setEditingName(true)} style={styles.editIcon}>
+            <Ionicons name="pencil" size={16} color="#7E349D" />
+          </TouchableOpacity>
+        </View>
+      )}
       {phone && <Text style={styles.phoneText}>{phone}</Text>}
 
       {/* Upload Button */}
@@ -179,6 +231,48 @@ const styles = StyleSheet.create({
     top: 0, left: 0, right: 0, bottom: 0,
     borderRadius: 65,
     backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  editIcon: {
+    marginLeft: 8,
+    padding: 4,
+  },
+  editNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  nameInput: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#7E349D',
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1a0033',
+    paddingVertical: 0,
+    minWidth: 150,
+    textAlign: 'center',
+  },
+  saveNameBtn: {
+    marginLeft: 10,
+    backgroundColor: '#25D366',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelNameBtn: {
+    marginLeft: 8,
+    backgroundColor: '#e74c3c',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
