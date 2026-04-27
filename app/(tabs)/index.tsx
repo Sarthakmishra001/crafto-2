@@ -7,11 +7,11 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
-import { Share } from 'react-native';
+import * as Sharing from 'expo-sharing';
 
 // ─── Category Data ────────────────────────────────────────────────────────────
 const CATEGORIES = [
-  { id: 'aAll', label: 'All', icon: '' },
+  { id: 'all', label: 'All', icon: '' },
   { id: 'days_special', label: "Day's Special", icon: '⭐' },
   { id: 'birthday', label: 'Birthday', icon: '🎂' },
   { id: 'good_morning', label: 'Good Morning', icon: '' },
@@ -85,23 +85,32 @@ const captureAndSaveImage = async (viewShotRef: any): Promise<boolean> => {
  */
 const captureAndShareImage = async (viewShotRef: any): Promise<boolean> => {
   try {
-    // Ensure capture method is available
     if (!viewShotRef.current) {
       throw new Error('ViewShot ref not found');
     }
 
-    // Small delay to ensure the UI is fully painted
     await new Promise(resolve => setTimeout(resolve, 200));
 
-    // Capture the view as a high-quality URI
-    const uri = await viewShotRef.current.capture();
+    const uri = await viewShotRef.current.capture({
+      format: "png",
+      quality: 1,
+    });
 
-    // Use React Native's Share API to share the image URI
-    await Share.share({ url: uri, title: 'Share Template' });
+    // Check availability
+    const available = await Sharing.isAvailableAsync();
+
+    if (!available) {
+      Alert.alert("Error", "Sharing not supported on this device");
+      return false;
+    }
+
+    // 🔥 THIS IS THE MAGIC
+    await Sharing.shareAsync(uri);
+
     return true;
   } catch (err: any) {
     console.log('Share Error:', err);
-    Alert.alert('Share Failed', err?.message || 'Something went wrong while sharing the image.');
+    Alert.alert('Share Failed', err?.message);
     return false;
   }
 };
