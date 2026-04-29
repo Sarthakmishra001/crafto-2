@@ -66,7 +66,12 @@
         {
           "photosPermission": "Allow Crafto to access your photos to set a profile picture."
         }
+<<<<<<< HEAD
       ]
+=======
+      ],
+      "expo-video"
+>>>>>>> b39509f (video feature)
     ],
     "experiments": {
       "typedRoutes": true,

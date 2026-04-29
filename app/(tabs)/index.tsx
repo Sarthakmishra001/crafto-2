@@ -8,6 +8,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
+<<<<<<< HEAD
+=======
+import VideoCard from '../components/VideoCard';
+>>>>>>> b39509f (video feature)
 
 // ─── Category Data ────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -32,6 +36,15 @@ const DUMMY_POSTS = [
   { id: '3', title: 'नया', image: require('../../assets/images/three.png') },
 ];
 
+<<<<<<< HEAD
+=======
+// ─── Video Post Data ───────────────────────────────────────────────────────────
+const VIDEO_POSTS = [
+  { id: 'v1', title: 'Video Template 1', video: require('../../assets/videos/one.mp4') },
+  { id: 'v2', title: 'Video Template 2', video: require('../../assets/videos/two.mp4') },
+];
+
+>>>>>>> b39509f (video feature)
 // ─── Utility: Capture & Save Image ─────────────────────────────────────────────
 /**
  * Captures a ViewShot reference and saves it to the device's media gallery.
@@ -63,8 +76,14 @@ const captureAndSaveImage = async (viewShotRef: any): Promise<boolean> => {
     // ✅ Capture image
     const uri = await viewShotRef.current.capture();
 
+<<<<<<< HEAD
     // ✅ Save to gallery
     await MediaLibrary.saveToLibraryAsync(uri);
+=======
+    // ✅ Save to gallery using Album creation for instant visibility
+    const asset = await MediaLibrary.createAssetAsync(uri);
+    await MediaLibrary.createAlbumAsync('Crafto', asset, false);
+>>>>>>> b39509f (video feature)
 
     return true;
   } catch (err: any) {
@@ -383,6 +402,18 @@ export default function HomeScreen() {
         {DUMMY_POSTS.map(post => (
           <PostCard key={post.id} item={post} user={user} />
         ))}
+<<<<<<< HEAD
+=======
+
+        {/* ─── Video Templates ────────────────────────────────────────── */}
+        {VIDEO_POSTS.map(videoPost => (
+          <VideoCard
+            key={videoPost.id}
+            videoSource={videoPost.video}
+            user={user}
+          />
+        ))}
+>>>>>>> b39509f (video feature)
       </ScrollView>
     </View>
   );

@@ -31,7 +31,10 @@ yarn-error.*
 *.pem
 
 # local env files
+<<<<<<< HEAD
 .env
+=======
+>>>>>>> b39509f (video feature)
 .env*.local
 
 # typescript
